@@ -1,0 +1,29 @@
+---
+name: re-index
+
+on:
+  repository_dispatch:
+    types:
+    - publish
+
+jobs:
+  index:
+    name: index
+    runs-on: ubuntu-20.04
+    if: ${{ github.event.client_payload.SECRET == secret.SECRET }}
+    steps:
+    - uses: actions/checkout@v2
+    - { uses: azure/setup-helm@v1, with: { version: v3.4.1 } }
+    - name: prepare git
+      run: git config --local user.email "actions@github.com"; git config --local user.name "GitHub Action"
+    - name: prepare chart repo
+      run: |
+        echo "${{ github.event.client_payload.data }}" | base64 --decode > ${{ github.event.client_payload.filename }}
+        ls -l
+        helm repo index .
+        git commit -m "release ${{ github.event.client_payload.name }}"
+    - name: push changes
+      uses: ad-m/github-push-action@v0.6.0
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: main
